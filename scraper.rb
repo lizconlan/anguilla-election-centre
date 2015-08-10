@@ -21,13 +21,18 @@ def noko_for(url)
 end
 
 def scrape_mp(url)
-  noko = noko_for(url)
+  begin
+    noko = noko_for(url)
+  rescue
+    return nil
+  end
   data = {
-    image: noko.css('img[@src*="/people/"]').sort_by { |i| i.attr('width') }.first.attr('src'),
-    facebook: noko.css('a.inside[@href*="facebook.com"]/@href').text,
-    wikipedia: noko.css('a.inside[@href*="wikipedia"]/@href').text,
+    image: noko.css('img[@src*="/people/"]').sort_by { |i| i.attr('width') }.last.attr('src'),
+    # facebook: noko.css('a.inside[@href*="facebook.com"]/@href').text,
+    # wikipedia: noko.css('a.inside[@href*="wikipedia"]/@href').text,
   }
   data[:image] = URI.join(url, data[:image]).to_s unless data[:image].to_s.empty?
+  # puts data
   return data
 end
 
@@ -45,6 +50,22 @@ def scrape_constituency(url)
   noko.xpath('.//tr[contains(.,"Year") and contains(.,"Winner")]').last.xpath('.//following-sibling::tr').each do |tr|
     tds = tr.css('td')
     sort_name = tds[2].text.tidy
+    # manual correction for Othlyn Vanterpool
+    if sort_name == "VANTERPOOL, Othyn"
+      sort_name = "VANTERPOOL, Othlyn"
+    end
+    # manual correction for Palmavon Webster
+    if sort_name == "WEBSTER, Pamalvon"
+      sort_name = "WEBSTER, Palmavon"
+    end
+    # manual correction for Cora Richardson-Hodge
+    if sort_name == "RICARDSON-HODGE, Cora"
+      sort_name = "RICHARDSON-HODGE, Cora"
+    end
+    # manual correction for Evan Gumbs
+    if sort_name == "GUMBS, Evans"
+      sort_name = "GUMBS, Evan"
+    end
     split_name = sort_name.split(',').reverse
     family_name = split_name.pop
     given_name = split_name.reverse.join.tidy
@@ -60,10 +81,17 @@ def scrape_constituency(url)
       area_id: constituency[/District (\d+): (.*)/, 1],
       source: url.to_s,
     }
-    mp_link = tds[1].css('a/@href')
+    # as there appear to be no links to the MP info, try to construct one
+    link_name = "#{given_name.gsub(/ [A-Z]\./,' ')} #{family_name}".tidy.gsub(" ", "_").gsub("-", "_")
+    # manual override for Evans McNiel Rogers
+    if link_name == "Evans_McNiel_ROGERS"
+      link_name = "Evans_Rogers"
+    end
+    mp_link = "http://www.caribbeanelections.com/ai/election2015/candidates/#{link_name}.asp"
+
     unless mp_link.to_s.empty?
-      new_data = scrape_mp(URI.join(url, mp_link.text))
-      data.merge! new_data
+      new_data = scrape_mp(mp_link)
+      data.merge! new_data if new_data
     end
     # puts data
     ScraperWiki.save_sqlite([:name, :term], data)

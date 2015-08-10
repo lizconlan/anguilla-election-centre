@@ -44,12 +44,18 @@ def scrape_constituency(url)
   puts constituency
   noko.xpath('.//tr[contains(.,"Year") and contains(.,"Winner")]').last.xpath('.//following-sibling::tr').each do |tr|
     tds = tr.css('td')
+    name = tds[2].text.tidy.split(',').reverse
+    family_name = name.pop
+    given_name = name.reverse.join.tidy
     data = {
-      name: tds[2].text.tidy,
+      name: "#{given_name} #{family_name}",
+      full_name: "#{given_name} #{family_name}",
+      family_name: family_name,
+      given_name: given_name,
       party: tds[3].text.tidy,
       term: tds[0].text.tidy,
-      area: constituency[/District (\d+): (.*)/, 1],
-      area_id: constituency[/District (\d+): (.*)/, 2],
+      area: constituency[/District (\d+): (.*)/, 2],
+      area_id: constituency[/District (\d+): (.*)/, 1],
       source: url.to_s,
     }
     mp_link = tds[1].css('a/@href')

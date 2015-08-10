@@ -62,7 +62,7 @@ def scrape_constituency(url)
   end
 end
 
-%w(1989 1994 1999 2000 2005 2010 2015).each_cons(2) do |s, e|
+%w(1989 1994 1999 2000 2005 2010 2015 2020).each_cons(2) do |s, e|
   term = {
     id: s,
     name: "#{s}–#{e}",
